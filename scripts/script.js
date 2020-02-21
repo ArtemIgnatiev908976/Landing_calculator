@@ -31,11 +31,27 @@ const startButton = document.querySelector('.start-button'),
     fastRange = document.querySelector('.fast-range'),
     totalPriceSum = document.querySelector('.total_price__sum'),
     adapt = document.getElementById('adapt'),
-    modileTemplates = document.getElementById('mobileTemplates'),
+    mobileTemplates = document.getElementById('mobileTemplates'),
+    desktopTemplates = document.getElementById('desktopTemplates'),
+    editable = document.getElementById('editable'),
+
+    adaptValue = document.querySelector('.adapt_value'),
+    mobileTemplatesValue = document.querySelector('.mobileTemplates_value'),
+    desktopTemplatesValue = document.querySelector('.desktopTemplates_value'),
+    editableValue = document.querySelector('.editable_value'),
+
     typeSite = document.querySelector('.type-site'),
     maxDeadline = document.querySelector('.max-deadline'),
     rangeDeadline = document.querySelector('.range-deadline'),
-    deadlineValue = document.querySelector('.deadline-value');
+    deadlineValue = document.querySelector('.deadline-value'),
+
+    calcDescription = document.querySelector('.calc-description'),
+    metrikaYandex = document.getElementById('metrikaYandex'),
+    analyticsGoogle = document.getElementById('analyticsGoogle'),
+    sendOrder = document.getElementById('sendOrder'),
+    cardHead = document.querySelector('.card-head'),
+    totalPrice = document.querySelector('.total_price'),
+    firstFieldset = document.querySelector('.first-fieldset');
 
 
 // возвращает только слово
@@ -57,6 +73,51 @@ function hideElem(elem) {
 
 }
 
+function dopOptionString() {
+
+
+    let str = '';
+
+    if (metrikaYandex.checked || analyticsGoogle.checked || sendOrder.checked) {
+
+        str += ' Подключим'
+
+        if (metrikaYandex.checked) {
+            str += ' Яндекс Метрику'
+
+
+            if (analyticsGoogle.checked && sendOrder.checked) {
+                str += ', Гугл Аналитику и отправку заявок на почту.'
+                return;
+            }
+            if (analyticsGoogle.checked || sendOrder.checked) {
+
+                str += ' и'
+            }
+
+
+        }
+
+        if (analyticsGoogle.checked) {
+
+            str += ' Гугл аналитику'
+            if (sendOrder.checked) {
+                str += ' и'
+            }
+
+        }
+        if (sendOrder.checked) {
+            str += ' отправку заявок на почту'
+        }
+
+
+        str += '.';
+    }
+
+    return str;
+
+
+}
 
 function renderTextContent(total, site, maxDay, minDay) {
     totalPriceSum.textContent = total;
@@ -64,7 +125,27 @@ function renderTextContent(total, site, maxDay, minDay) {
     maxDeadline.textContent = declOfNum(maxDay, DAY_STRING);
     rangeDeadline.min = minDay;
     rangeDeadline.max = maxDay;
-    deadlineValue.textContent = declOfNum(rangeDeadline.value, DAY_STRING)
+    deadlineValue.textContent = declOfNum(rangeDeadline.value, DAY_STRING);
+
+    adaptValue.textContent = adapt.checked ? 'Да' : 'Нет';
+    mobileTemplatesValue.textContent = mobileTemplates.checked ? 'Да' : 'Нет';
+    desktopTemplatesValue.textContent = desktopTemplates.checked ? 'Да' : 'Нет';
+    editableValue.textContent = editableValue.checked ? 'Да' : 'Нет';
+
+
+    calcDescription.textContent = `
+    
+    Сделаем ${site}${adapt.checked ?
+    ', адаптированный под мобильные устройства и планшеты' : ''}. 
+        ${editable.checked ? ` Установим панель админстратора, чтобы вы могли самостоятельно менять содержание на сайте без разработчика.` :''}
+        ${dopOptionString()}
+        
+   
+   
+    
+    
+    
+    `;
 
 }
 
@@ -75,14 +156,15 @@ function renderTextContent(total, site, maxDay, minDay) {
 
 
 
-function priceCalculation(elem) {
+function priceCalculation(elem ={}) {
 
     let result = 0;
     index = 0;
     options = [];
     site = '';
     maxDeadlineDay = DATA.deadlineDay[index][1],
-        minDeadlineDay = DATA.deadlineDay[index][0];
+        minDeadlineDay = DATA.deadlineDay[index][0],
+        overPercent = 0;
 
     if (elem.name === 'whichSite') {
         for (const item of formCalculate.elements) {
@@ -106,9 +188,16 @@ function priceCalculation(elem) {
         } else if (item.classList.contains('calc-handler') && item.checked) {
 
             options.push(item.value)
+        } else if (item.classList.contains('want-faster') && item.checked) {
+
+            const overDay = maxDeadlineDay - rangeDeadline.value;
+            overPercent = overDay * (DATA.deadlinePercent[index] / 100);
+
         }
 
     }
+    result += DATA.price[index];
+
 
     options.forEach(function(key) {
         if (typeof(DATA[key]) === 'number') {
@@ -121,15 +210,16 @@ function priceCalculation(elem) {
             if (key === 'desktopTemplates') {
                 result += DATA.price[index] * DATA[key][index] / 100
             } else {
-                result += DATA[key][index];
+
             }
 
         }
     })
-    result += DATA.price[index];
 
 
-    renderTextContent(result, site, maxDeadlineDay, minDeadlineDay)
+    result += result * overPercent;
+
+    renderTextContent(result, site, maxDeadlineDay, minDeadlineDay);
 
 }
 //сбрасываем все чеки при выборе другого вначале
@@ -160,6 +250,7 @@ function handlerCallBackForm(event) {
     if (target.classList.contains('want-faster')) {
 
         target.checked ? showElem(fastRange) : hideElem(fastRange);
+        priceCalculation(target);
 
     }
 
@@ -172,10 +263,43 @@ function handlerCallBackForm(event) {
 
 };
 
+function moveBackTotal(){
+
+
+   if (document.documentElement.getBoundingClientRect().bottom > document.documentElement.clientHeight + 400){
+
+    totalPrice.classList.remove('totalPriceBottom');
+    firstFieldset.after(totalPrice);
+    window.removeEventListener('scroll', moveBackTotal);
+    window.addEventListener('scroll', moveTotal);
+
+
+   }
+   
+
+}
+
+
+function moveTotal(){
+
+    if (document.documentElement.getBoundingClientRect().bottom < document.documentElement.clientHeight + 400){
+
+        totalPrice.classList.add('totalPriceBottom');
+        endButton.before(totalPrice);
+        window.removeEventListener('scroll', moveTotal);
+        window.addEventListener('scroll', moveBackTotal);
+    }
+}
+
+
+
+
 startButton.addEventListener('click', function() {
 
         showElem(mainForm);
         hideElem(firstScreen);
+       
+        window.addEventListener('scroll', moveTotal);
 
     }) //скрываем блок и открываем новый
 
@@ -189,10 +313,14 @@ endButton.addEventListener('click', function() {
         }
 
     }
+
+    cardHead.textContent ='Заявка на разработку сайта';
+    hideElem(totalPrice);
     showElem(total);
     //цикл будет крутится столько сколько тут элементов в форме то есть 26 раз
 
 });
 
 
-formCalculate.addEventListener('change', handlerCallBackForm)
+formCalculate.addEventListener('change', handlerCallBackForm);
+priceCalculation();
